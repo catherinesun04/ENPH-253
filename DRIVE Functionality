@@ -1,10 +1,6 @@
 #include <Arduino.h>
-#include "../.platformio/packages/framework-arduinoespressif32/cores/esp32/esp32-hal-ledc.h"
-
-// Define motor pins for the H-bridges on the ESP32
-const int backRightMotorPin1 = 16; // Back right motor input pin 1
-const int backRightMotorPin2 = 17; // Back rig#include <Arduino.h>
-#include "../.platformio/packages/framework-arduinoespressif32/cores/esp32/esp32-hal-ledc.h"
+#include <WiFi.h>
+#include <esp_now.h>
 #include <Servo.h>
 
 // Define motor pins for the H-bridges on the ESP32
@@ -27,10 +23,6 @@ const int frontRightPwmChannel2 = 5;
 const int frontLeftPwmChannel1 = 6;
 const int frontLeftPwmChannel2 = 7;
 
-// Define PWM frequency and resolution
-const int pwmFrequency = 10000; // 10 kHz frequency
-const int pwmResolution = 10; // 10-bit resolution, values between 0 and 1023
-
 // Define servo motor pins
 const int servo1Pin = 26;  // Servo motor 1 control pin
 const int servo2Pin = 27;  // Servo motor 2 control pin
@@ -38,26 +30,22 @@ const int servo2Pin = 27;  // Servo motor 2 control pin
 // Define microswitch sensor pins
 const int microswitch1Pin = 32;
 const int microswitch2Pin = 33;
-const int microswitch3Pin = 34;
+const int microswitch3Pin = 14;
+
+// Define reflectance sensor pins
+const int reflectanceSensor1Pin = 34;
+const int reflectanceSensor2Pin = 35;
+
+// Define PWM frequency and resolution
+const int pwmFrequency = 10000; // 10 kHz frequency
+const int pwmResolution = 10; // 10-bit resolution, values between 0 and 1023
+
+// Threshold for determining black line (subject to calibration)
+const int BLACK_LINE_THRESHOLD = 500; // Adjust based on actual sensor readings
 
 // Create Servo objects
 Servo servo1;
 Servo servo2;
-
-// Define reflectance sensor pins
-const int reflectanceSensor1Pin = 35;
-const int reflectanceSensor2Pin = 36;
-
-void initializeIOPins() {
-    // Initialize servo motor pins
-    servo1.attach(servo1Pin);
-    servo2.attach(servo2Pin);
-
-    // Initialize microswitch sensor pins
-    pinMode(microswitch1Pin, INPUT_PULLUP); // Assuming the microswitch is active low
-    pinMode(microswitch2Pin, INPUT_PULLUP);
-    pinMode(microswitch3Pin, INPUT_PULLUP);
-}
 
 // Function to initialize motor pins and PWM channels
 void initializeMotorPins() {
@@ -89,6 +77,20 @@ void initializeMotorPins() {
     ledcAttachPin(frontRightMotorPin2, frontRightPwmChannel2);
     ledcAttachPin(frontLeftMotorPin1, frontLeftPwmChannel1);
     ledcAttachPin(frontLeftMotorPin2, frontLeftPwmChannel2);
+}
+
+// Function to initialize additional I/O pins
+void initializeIOPins() {
+    // Initialize servo motor pins
+    servo1.attach(servo1Pin);
+    servo2.attach(servo2Pin);
+
+    // Initialize microswitch sensor pins
+    pinMode(microswitch1Pin, INPUT_PULLUP); // Assuming the microswitch is active low
+    pinMode(microswitch2Pin, INPUT_PULLUP);
+    pinMode(microswitch3Pin, INPUT_PULLUP);
+
+    // Reflectance sensors are initialized by default for analog reading
 }
 
 // Function to control motor speed and direction with PWM
@@ -188,12 +190,12 @@ void stopRobot() {
     dynamicBrakeMotor(backRightPwmChannel1, backRightPwmChannel2);
 }
 
-// Functoin to set a given servomotor angle
+// Function to set the angle of servo motors
 void setServoAngle(Servo &servo, int angle) {
     servo.write(angle);
 }
 
-// Function to determine if Microswitch is pressed
+// Function to check if a microswitch is pressed
 bool isMicroswitchPressed(int pin) {
     return digitalRead(pin) == LOW; // Assuming active low configuration
 }
@@ -204,169 +206,81 @@ int readReflectanceSensor(int pin) {
 }
 
 void setup() {
-    // Initialize serial communication (if needed)
+    // Initialize serial communication for debugging
     Serial.begin(115200);
 
     // Initialize motor pins and PWM channels
     initializeMotorPins();
 
-    // Initialize I/O pins
+    // Initialize additional I/O pins
     initializeIOPins();
+
+    // Print a message to indicate setup completion
+    Serial.println("Setup complete.");
+
+    // Initialize WiFi for ESP-NOW
+    WiFi.mode(WIFI_STA);
+    if (esp_now_init() != ESP_OK) {
+        Serial.println("Error initializing ESP-NOW");
+        return;
+    }
+    Serial.println("ESP-NOW initialized.");
 }
 
 void loop() {
-    // insert testing instruction to verify functionality
-}ht motor input pin 2
-const int backLeftMotorPin1 = 18;  // Back left motor input pin 1
-const int backLeftMotorPin2 = 19;  // Back left motor input pin 2
-const int frontRightMotorPin1 = 21; // Front right motor input pin 1
-const int frontRightMotorPin2 = 22; // Front right motor input pin 2
-const int frontLeftMotorPin1 = 23;  // Front left motor input pin 1
-const int frontLeftMotorPin2 = 25;  // Front left motor input pin 2
+    // Example: Move the servo motors to specific angles
+    setServoAngle(servo1, 90); // Move servo1 to 90 degrees
+    setServoAngle(servo2, 45); // Move servo2 to 45 degrees
+    delay(1000); // Wait for 1 second
 
-// Define PWM channels
-const int backRightPwmChannel1 = 0;
-const int backRightPwmChannel2 = 1;
-const int backLeftPwmChannel1 = 2;
-const int backLeftPwmChannel2 = 3;
-const int frontRightPwmChannel1 = 4;
-const int frontRightPwmChannel2 = 5;
-const int frontLeftPwmChannel1 = 6;
-const int frontLeftPwmChannel2 = 7;
+    // Read the state of microswitch sensors
+    bool microswitch1State = isMicroswitchPressed(microswitch1Pin);
+    bool microswitch2State = isMicroswitchPressed(microswitch2Pin);
+    bool microswitch3State = isMicroswitchPressed(microswitch3Pin);
 
-// Define PWM frequency and resolution
-const int pwmFrequency = 10000; // 10 kHz frequency
-const int pwmResolution = 10; // 10-bit resolution, values between 0 and 1023
+    // Print microswitch states
+    Serial.print("Microswitch 1: ");
+    Serial.println(microswitch1State);
+    Serial.print("Microswitch 2: ");
+    Serial.println(microswitch2State);
+    Serial.print("Microswitch 3: ");
+    Serial.println(microswitch3State);
 
-// Function to initialize motor pins and PWM channels
-void initializeMotorPins() {
-    pinMode(backRightMotorPin1, OUTPUT);
-    pinMode(backRightMotorPin2, OUTPUT);
-    pinMode(backLeftMotorPin1, OUTPUT);
-    pinMode(backLeftMotorPin2, OUTPUT);
-    pinMode(frontRightMotorPin1, OUTPUT);
-    pinMode(frontRightMotorPin2, OUTPUT);
-    pinMode(frontLeftMotorPin1, OUTPUT);
-    pinMode(frontLeftMotorPin2, OUTPUT);
+    // Read reflectance sensor values
+    int reflectanceSensor1Value = readReflectanceSensor(reflectanceSensor1Pin);
+    int reflectanceSensor2Value = readReflectanceSensor(reflectanceSensor2Pin);
 
-    // Set up PWM channels
-    ledcSetup(backRightPwmChannel1, pwmFrequency, pwmResolution);
-    ledcSetup(backRightPwmChannel2, pwmFrequency, pwmResolution);
-    ledcSetup(backLeftPwmChannel1, pwmFrequency, pwmResolution);
-    ledcSetup(backLeftPwmChannel2, pwmFrequency, pwmResolution);
-    ledcSetup(frontRightPwmChannel1, pwmFrequency, pwmResolution);
-    ledcSetup(frontRightPwmChannel2, pwmFrequency, pwmResolution);
-    ledcSetup(frontLeftPwmChannel1, pwmFrequency, pwmResolution);
-    ledcSetup(frontLeftPwmChannel2, pwmFrequency, pwmResolution);
+    // Determine if black line is detected
+    bool blackLineDetected1 = reflectanceSensor1Value < BLACK_LINE_THRESHOLD;
+    bool blackLineDetected2 = reflectanceSensor2Value < BLACK_LINE_THRESHOLD;
 
-    // Attach PWM channels to motor pins
-    ledcAttachPin(backRightMotorPin1, backRightPwmChannel1);
-    ledcAttachPin(backRightMotorPin2, backRightPwmChannel2);
-    ledcAttachPin(backLeftMotorPin1, backLeftPwmChannel1);
-    ledcAttachPin(backLeftMotorPin2, backLeftPwmChannel2);
-    ledcAttachPin(frontRightMotorPin1, frontRightPwmChannel1);
-    ledcAttachPin(frontRightMotorPin2, frontRightPwmChannel2);
-    ledcAttachPin(frontLeftMotorPin1, frontLeftPwmChannel1);
-    ledcAttachPin(frontLeftMotorPin2, frontLeftPwmChannel2);
-}
+    // Print reflectance sensor values
+    Serial.print("Reflectance Sensor 1: ");
+    Serial.print(reflectanceSensor1Value);
+    Serial.print(" - Black Line: ");
+    Serial.println(blackLineDetected1 ? "YES" : "NO");
 
-// Function to control motor speed and direction with PWM
-void setMotorSpeed(int pwmChannel1, int pwmChannel2, bool direction, int speed) {
-    if (direction) {
-        // Forward direction
-        ledcWrite(pwmChannel1, speed);
-        ledcWrite(pwmChannel2, 0);
-    } else {
-        // Backward direction
-        ledcWrite(pwmChannel1, 0);
-        ledcWrite(pwmChannel2, speed);
-    }
-}
+    Serial.print("Reflectance Sensor 2: ");
+    Serial.print(reflectanceSensor2Value);
+    Serial.print(" - Black Line: ");
+    Serial.println(blackLineDetected2 ? "YES" : "NO");
 
-void dynamicBrakeMotor(int pwmChannel1, int pwmChannel2) {
-  // Stops the motor by maximizing speed in opposite direction 
-    int currentSpeed1 = ledcRead(pwmChannel1);
-    int currentSpeed2 = ledcRead(pwmChannel2);
+    // Example logic for driving the robot
+    driveForward(512);
+    delay(2000); // Move forward for 2 seconds
 
-    if (currentSpeed1 > 0) {
-        // Current direction is forward, brake by reversing
-        ledcWrite(pwmChannel1, 0);
-        ledcWrite(pwmChannel2, currentSpeed1);
-    } else if (currentSpeed2 > 0) {
-        // Current direction is backward, brake by moving forward
-        ledcWrite(pwmChannel1, currentSpeed2);
-        ledcWrite(pwmChannel2, 0);
-    }
+    driveBackward(512);
+    delay(2000); // Move backward for 2 seconds
 
-    // Short delay to apply braking force
+    driveLeft(512);
+    delay(2000); // Move left for 2 seconds
 
-    delay(50); // ADJUST DELAY TIME BASED ON TESTING
+    driveRight(512);
+    delay(2000); // Move right for 2 seconds
 
-    // Set both motor speeds to zero to keep the motor still
-    ledcWrite(pwmChannel1, 0);
-    ledcWrite(pwmChannel2, 0);
-}
+    rotate180(512);
+    delay(2000); // Rotate and then wait for 2 seconds
 
-void driveForward(int speed) {
-// Function to drive the the robot forwards
-    setMotorSpeed(frontLeftPwmChannel1, frontLeftPwmChannel2, true, speed);
-    setMotorSpeed(frontRightPwmChannel1, frontRightPwmChannel2, true, speed);
-    setMotorSpeed(backLeftPwmChannel1, backLeftPwmChannel2, true, speed);
-    setMotorSpeed(backRightPwmChannel1, backRightPwmChannel2, true, speed);
-}
-
-// Function to drive the robot backwards
-void driveBackward(int speed) {
-    setMotorSpeed(frontLeftPwmChannel1, frontLeftPwmChannel2, false, speed);
-    setMotorSpeed(frontRightPwmChannel1, frontRightPwmChannel2, false, speed);
-    setMotorSpeed(backLeftPwmChannel1, backLeftPwmChannel2, false, speed);
-    setMotorSpeed(backRightPwmChannel1, backRightPwmChannel2, false, speed);
-}
-
-// Function to drive the robot to the left
-void driveLeft(int speed) {
-    int adjustedSpeed = speed * 1.1;
-    setMotorSpeed(frontLeftPwmChannel1, frontLeftPwmChannel2, false, speed);
-    setMotorSpeed(frontRightPwmChannel1, frontRightPwmChannel2, true, adjustedSpeed);
-    setMotorSpeed(backLeftPwmChannel1, backLeftPwmChannel2, true, adjustedSpeed);
-    setMotorSpeed(backRightPwmChannel1, backRightPwmChannel2, false, speed);
-}
-
-// Function to drive the robot to the right
-void driveRight(int speed) {
-    int adjustedSpeed = speed * 1.1;
-    setMotorSpeed(frontLeftPwmChannel1, frontLeftPwmChannel2, true, adjustedSpeed);
-    setMotorSpeed(frontRightPwmChannel1, frontRightPwmChannel2, false, speed);
-    setMotorSpeed(backLeftPwmChannel1, backLeftPwmChannel2, false, speed);
-    setMotorSpeed(backRightPwmChannel1, backRightPwmChannel2, true, adjustedSpeed);
-}
-
-void rotate180(int speed) {
-    // Set the wheels on one side to move forward and the wheels on the other side to move backward
-    setMotorSpeed(frontLeftPwmChannel1, frontLeftPwmChannel2, true, speed);
-    setMotorSpeed(frontRightPwmChannel1, frontRightPwmChannel2, false, speed);
-    setMotorSpeed(backLeftPwmChannel1, backLeftPwmChannel2, true, speed);
-    setMotorSpeed(backRightPwmChannel1, backRightPwmChannel2, false, speed);
-
-    int rotateTime = 500; // THIS IS SUBJECT TO TESTING
-    delay(rotateTime);
-
-    // Stop all motors
-    setMotorSpeed(frontLeftPwmChannel1, frontLeftPwmChannel2, true, 0);
-    setMotorSpeed(frontRightPwmChannel1, frontRightPwmChannel2, false, 0);
-    setMotorSpeed(backLeftPwmChannel1, backLeftPwmChannel2, true, 0);
-    setMotorSpeed(backRightPwmChannel1, backRightPwmChannel2, false, 0);
-}
-
-
-void setup() {
-    // Initialize serial communication (if needed)
-    Serial.begin(115200);
-
-    // Initialize motor pins and PWM channels
-    initializeMotorPins();
-}
-
-void loop() {
-  //fill up with algorithm
+    stopRobot();
+    delay(2000); // Stay stopped for 2 seconds
 }

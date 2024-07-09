@@ -78,10 +78,10 @@ void dynamicBrakeMotor(int pwmChannel1, int pwmChannel2) {
     if (currentSpeed1 > 0) {
         // Current direction is forward, brake by reversing
         ledcWrite(pwmChannel1, 0);
-        ledcWrite(pwmChannel2, 1023);
+        ledcWrite(pwmChannel2, currentSpeed1);
     } else if (currentSpeed2 > 0) {
         // Current direction is backward, brake by moving forward
-        ledcWrite(pwmChannel1, 1023);
+        ledcWrite(pwmChannel1, currentSpeed2);
         ledcWrite(pwmChannel2, 0);
     }
 

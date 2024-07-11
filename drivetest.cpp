@@ -3,6 +3,8 @@
 #include <Arduino.h>
 #include "robot_functions.h"
 
+int driveSpeed = 500;
+
 void setup() {
     Serial.begin(115200);
     initializeMotorPins();
@@ -18,12 +20,12 @@ void loop() {
 // Testing for the forwards and backwards driving
 void testDriveForwardBackward() {
     Serial.println("Testing forward and backward driving...");
-    driveForward(100);
+    driveForward(driveSpeed);
     delay(1000);
     stopRobot();
     delay(500);
 
-    driveBackward(100);
+    driveBackward(driveSpeed);
     delay(1000);
     stopRobot();
     delay(500);
@@ -32,12 +34,12 @@ void testDriveForwardBackward() {
 // Testing for the left and right driving
 void testDriveLeftRight() {
     Serial.println("Testing left and right driving...");
-    driveLeft(100);
+    driveLeft(driveSpeed);
     delay(1000);
     stopRobot();
     delay(500);
 
-    driveRight(100);
+    driveRight(driveSpeed);
     delay(1000);
     stopRobot();
     delay(500);

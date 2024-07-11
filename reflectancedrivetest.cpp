@@ -22,6 +22,10 @@ void loop() {
     testRightStop(driveSpeed, reflectanceSensorLeftPin, reflectanceSensorRightPin);
 
     delay(4000); // Delay before repeating the tests
+
+    testBackwardStop(driveSpeed, reflectanceSensorLeftPin, reflectanceSensorRightPin);
+
+    delay(4000);
 }
 
 // Function to test driving left until the robot is centered on the line
@@ -71,5 +75,36 @@ void testRightStop(int speed, int leftSensorPin, int rightSensorPin) {
             driveRight(speed);
         }
         delay(50); // Short delay to prevent overwhelming the motor control
+    }
+}
+
+void testBackwardStop(int speed, int leftSensorPin, int rightSensorPin) {
+    // Phase 1: Reverse until centered on the line
+    bool rotating = false;
+    while (true) {
+        if (!rotating) {
+            int leftSensorValue = readReflectanceSensor(leftSensorPin);
+            int rightSensorValue = readReflectanceSensor(rightSensorPin);
+            Direction dir = determineDirection(leftSensorValue, rightSensorValue);
+
+            if (dir == CENTERED) {
+                stopRobot();
+                Serial.println("Robot is centered on the line, time to rotate");
+                rotate180();
+                rotating = true; // Move to the next phase
+                delay(1000); // Give time for rotation
+            } else {
+                Serial.println("Robot hasn't reached the line yet, continuing reverse");
+                driveBackward(speed);
+            }
+        } else {
+            // Phase 2: Drive forward after rotating
+            driveForward(speed);
+            delay(1000); // This will not be time determined, insted we are using the input from the microswitch.
+            stopRobot();
+            Serial.println("Robot has reached the next counter, stopping.");
+            break;
+        }
+        delay(50);
     }
 }

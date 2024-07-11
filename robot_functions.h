@@ -59,6 +59,9 @@ struct ServoControl {
     int currentAngle;
 };
 
+extern ServoControl servo1Control;
+extern ServoControl servo2Control;
+
 // Function prototypes
 void initializeMotorPins();
 void initializeIOPins();
@@ -80,6 +83,10 @@ void testReadReflectanceSensor(int sensorPin);
 void testDriveForwardBackward();
 void testDriveLeftRight();
 void testRotate();
+void testSetServoAngle(ServoControl &servo1Control, int angle);
+void testMicroSwitchPress(int pin);
+void testLeftStop(int speed, int leftSensorPin, int rightSensorPin);
+void testRightStop(int speed, int leftSensorPin, int rightSensorPin);
 
 
 enum Direction {
